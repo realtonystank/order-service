@@ -4,6 +4,7 @@ import { CouponService } from "./couponService";
 import createHttpError from "http-errors";
 import { Roles } from "../common/constants";
 import { AuthRequest } from "../types";
+import mongoose from "mongoose";
 
 export class CouponController {
   constructor(
@@ -51,5 +52,55 @@ export class CouponController {
     this.logger.info(`Coupon created successfully with id: ${coupon._id}`);
 
     return res.status(201).json(coupon);
+  };
+
+  updateCoupon = async (req: Request, res: Response, next: NextFunction) => {
+    const { id } = req.params;
+    if (!mongoose.isValidObjectId(id)) {
+      next(createHttpError(400, "Coupon id is not in correct format"));
+      return;
+    }
+
+    this.logger.info(`Received request to update coupon with id: ${id}`);
+
+    const _req = req as AuthRequest;
+    const userRole = _req.auth.role;
+    const userTenant = _req.auth.tenant;
+
+    const oldCouponData = await this.couponService.getCouponById(
+      id as unknown as mongoose.Types.ObjectId,
+    );
+
+    if (
+      userRole === Roles.MANAGER &&
+      oldCouponData.tenant !== Number(userTenant)
+    ) {
+      next(createHttpError(403, "Forbidden!"));
+      return;
+    }
+
+    if (!oldCouponData) {
+      next(createHttpError(404, "Coupon with given id not found."));
+      return;
+    }
+
+    const { title, code, discount, validUpto, tenantId } = req.body;
+
+    const updatedCouponData = {
+      title: title ? title : oldCouponData.title,
+      code: code ? code : oldCouponData.code,
+      discount: discount ? Number(discount) : oldCouponData.discount,
+      validUpto: validUpto ? new Date(validUpto) : oldCouponData.validUpto,
+      tenant: tenantId ? Number(tenantId) : oldCouponData.tenant,
+    };
+
+    const updatedCoupon = await this.couponService.updateCouponById(
+      id as unknown as mongoose.Types.ObjectId,
+      updatedCouponData,
+    );
+
+    this.logger.info(`Updated coupon with id :${id}`);
+
+    res.json(updatedCoupon);
   };
 }

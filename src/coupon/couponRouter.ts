@@ -19,4 +19,11 @@ router.post(
   asyncWrapper(couponController.createCoupon),
 );
 
+router.patch(
+  "/:id",
+  authenticate,
+  canAccess([Roles.ADMIN, Roles.MANAGER]),
+  asyncWrapper(couponController.updateCoupon),
+);
+
 export default router;
