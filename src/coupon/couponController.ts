@@ -148,4 +148,32 @@ export class CouponController {
 
     res.status(204).json({ message: "success" });
   };
+
+  verify = async (req: Request, res: Response, next: NextFunction) => {
+    const { code, tenantId } = req.body;
+
+    if (!code || !tenantId) {
+      next(createHttpError(400, "coupon code or tenant id is missing"));
+      return;
+    }
+
+    const coupon = await this.couponService.findCouponFromCodeAndTenant(
+      code,
+      Number(tenantId),
+    );
+
+    if (!coupon) {
+      next(createHttpError(404, "Coupon does not exist"));
+      return;
+    }
+
+    const currentDate = new Date();
+    const couponDate = coupon.validUpto;
+
+    if (currentDate <= couponDate) {
+      return res.json({ valid: true, discount: coupon.discount });
+    }
+
+    return res.json({ valid: false, discount: 0 });
+  };
 }

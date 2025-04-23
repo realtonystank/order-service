@@ -28,4 +28,8 @@ export class CouponService {
   deleteCouponById = (couponId: mongoose.Types.ObjectId) => {
     return couponModel.findByIdAndDelete(couponId);
   };
+
+  findCouponFromCodeAndTenant = (code: string, tenant: number) => {
+    return couponModel.findOne({ code, tenant });
+  };
 }

@@ -35,4 +35,6 @@ router.delete(
   asyncWrapper(couponController.deleteCoupon),
 );
 
+router.post("/verify", asyncWrapper(couponController.verify));
+
 export default router;
