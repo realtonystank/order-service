@@ -26,4 +26,13 @@ router.patch(
   asyncWrapper(couponController.updateCoupon),
 );
 
+router.get("/", asyncWrapper(couponController.getAllCoupons));
+
+router.delete(
+  "/:id",
+  authenticate,
+  canAccess([Roles.ADMIN, Roles.MANAGER]),
+  asyncWrapper(couponController.deleteCoupon),
+);
+
 export default router;

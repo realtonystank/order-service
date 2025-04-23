@@ -103,4 +103,49 @@ export class CouponController {
 
     res.json(updatedCoupon);
   };
+
+  getAllCoupons = async (req: Request, res: Response) => {
+    this.logger.info("Received request to fetch all coupons");
+    const coupons = await this.couponService.fetchAllCoupons();
+
+    return res.json(coupons);
+  };
+
+  deleteCoupon = async (req: Request, res: Response, next: NextFunction) => {
+    const { id } = req.params;
+    if (!mongoose.isValidObjectId(id)) {
+      next(createHttpError(400, "Coupon id is not in correct format"));
+      return;
+    }
+
+    this.logger.info(`Received request to delete coupon by id: ${id}`);
+
+    const coupon = await this.couponService.getCouponById(
+      id as unknown as mongoose.Types.ObjectId,
+    );
+
+    if (!coupon) {
+      next(createHttpError(404, "Coupon with given id not found."));
+      return;
+    }
+
+    const _req = req as AuthRequest;
+    const userRole = _req.auth.role;
+    const userTenant = _req.auth.tenant;
+
+    if (userRole === Roles.MANAGER && coupon.tenant !== Number(userTenant)) {
+      next(createHttpError(403, "Forbidden."));
+      return;
+    }
+
+    this.logger.info(`Found coupon with given id`);
+
+    await this.couponService.deleteCouponById(
+      id as unknown as mongoose.Types.ObjectId,
+    );
+
+    this.logger.info(`Coupon with id: ${id} deleted successfully.`);
+
+    res.status(204).json({ message: "success" });
+  };
 }

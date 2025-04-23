@@ -20,4 +20,12 @@ export class CouponService {
       new: true,
     });
   };
+
+  fetchAllCoupons = () => {
+    return couponModel.find({ validUpto: { $gte: new Date() } });
+  };
+
+  deleteCouponById = (couponId: mongoose.Types.ObjectId) => {
+    return couponModel.findByIdAndDelete(couponId);
+  };
 }
