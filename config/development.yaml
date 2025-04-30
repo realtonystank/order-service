@@ -7,3 +7,7 @@ database:
   url: mongodb://localhost:27017/orderDB?authSource=admin&w=1
 client:
   url: http://localhost:3000
+service:
+  name: order-service
+kafka:
+  broker: localhost:9092
