@@ -9,6 +9,8 @@ import toppingCacheModel, {
   ToppingPricingCache,
 } from "../toppingCache/toppingCacheModel";
 import couponModel from "../coupon/couponModel";
+import orderModel from "./orderModel";
+import { OrderStatus, PaymentStatus } from "./orderTypes";
 export class OrderController {
   create = async (req: Request, res: Response, next: NextFunction) => {
     const result = validationResult(req);
@@ -17,11 +19,19 @@ export class OrderController {
       return;
     }
 
-    const totalPrice = await this.calculateTotal(req.body.cart);
+    const {
+      cart,
+      couponCode,
+      tenantId,
+      paymentMode,
+      customerId,
+      comment,
+      address,
+    } = req.body;
+
+    const totalPrice = await this.calculateTotal(cart);
 
     let discountPercentage = 0;
-    const tenantId = req.body.tenantId;
-    const couponCode = req.body.couponCode;
     if (couponCode) {
       discountPercentage = await this.getDicountPercentage(
         couponCode,
@@ -41,7 +51,22 @@ export class OrderController {
 
     const finalTotal = priceAfterDiscount + taxes + DELIVERY_CHARGES;
 
-    return res.json({ totalPrice, discountAmount, taxes, finalTotal });
+    const newOrder = await orderModel.create({
+      cart,
+      address,
+      comment,
+      customerId,
+      deliveryCharges: DELIVERY_CHARGES,
+      discount: discountAmount,
+      paymentMode,
+      orderStatus: OrderStatus.RECEIVED,
+      paymentStatus: PaymentStatus.PENDING,
+      taxes,
+      tenantId,
+      total: finalTotal,
+    });
+
+    return res.json({ newOrder });
   };
 
   private calculateTotal = async (cart: CartItem[]) => {
