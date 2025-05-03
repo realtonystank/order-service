@@ -11,6 +11,8 @@ import toppingCacheModel, {
 import couponModel from "../coupon/couponModel";
 import orderModel from "./orderModel";
 import { OrderStatus, PaymentStatus } from "./orderTypes";
+import idempotencyModel from "../idempotency/idempotencyModel";
+import mongoose from "mongoose";
 export class OrderController {
   create = async (req: Request, res: Response, next: NextFunction) => {
     const result = validationResult(req);
@@ -51,20 +53,51 @@ export class OrderController {
 
     const finalTotal = priceAfterDiscount + taxes + DELIVERY_CHARGES;
 
-    const newOrder = await orderModel.create({
-      cart,
-      address,
-      comment,
-      customerId,
-      deliveryCharges: DELIVERY_CHARGES,
-      discount: discountAmount,
-      paymentMode,
-      orderStatus: OrderStatus.RECEIVED,
-      paymentStatus: PaymentStatus.PENDING,
-      taxes,
-      tenantId,
-      total: finalTotal,
-    });
+    const idempotencyKey = req.headers["idempotency-key"];
+
+    console.log("idempotencyKey - ", idempotencyKey);
+
+    const idempotency = await idempotencyModel.findOne({ key: idempotencyKey });
+
+    let newOrder = idempotency ? [idempotency.response] : [];
+
+    if (!idempotency) {
+      const session = await mongoose.startSession();
+      session.startTransaction();
+
+      try {
+        newOrder = await orderModel.create(
+          [
+            {
+              cart,
+              address,
+              comment,
+              customerId,
+              deliveryCharges: DELIVERY_CHARGES,
+              discount: discountAmount,
+              paymentMode,
+              orderStatus: OrderStatus.RECEIVED,
+              paymentStatus: PaymentStatus.PENDING,
+              taxes,
+              tenantId,
+              total: finalTotal,
+            },
+          ],
+          { session },
+        );
+
+        await idempotencyModel.create(
+          [{ key: idempotencyKey, response: newOrder[0] }],
+          { session },
+        );
+        await session.commitTransaction();
+      } catch (err) {
+        await session.abortTransaction();
+        return next(createHttpError(500, err.message));
+      } finally {
+        await session.endSession();
+      }
+    }
 
     return res.json({ newOrder });
   };
