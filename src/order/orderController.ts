@@ -10,10 +10,13 @@ import toppingCacheModel, {
 } from "../toppingCache/toppingCacheModel";
 import couponModel from "../coupon/couponModel";
 import orderModel from "./orderModel";
-import { OrderStatus, PaymentStatus } from "./orderTypes";
+import { OrderStatus, PaymentMode, PaymentStatus } from "./orderTypes";
 import idempotencyModel from "../idempotency/idempotencyModel";
 import mongoose from "mongoose";
+import { PaymentGW } from "../payment/paymentTypes";
 export class OrderController {
+  constructor(private paymentGw: PaymentGW) {}
+
   create = async (req: Request, res: Response, next: NextFunction) => {
     const result = validationResult(req);
     if (!result.isEmpty()) {
@@ -62,6 +65,7 @@ export class OrderController {
     let newOrder = idempotency ? [idempotency.response] : [];
 
     if (!idempotency) {
+      console.log("idempotency key not found, hence creating a new order");
       const session = await mongoose.startSession();
       session.startTransaction();
 
@@ -92,14 +96,29 @@ export class OrderController {
         );
         await session.commitTransaction();
       } catch (err) {
+        console.log(
+          "Something went wrong while creating new order or creating idempotency key",
+        );
         await session.abortTransaction();
         return next(createHttpError(500, err.message));
       } finally {
         await session.endSession();
       }
     }
+    if (paymentMode === PaymentMode.CARD) {
+      const session = await this.paymentGw.createSession({
+        amount: finalTotal,
+        orderId: newOrder[0]._id.toString(),
+        cashfreeOrderId: `${newOrder[0]._id.toString()}${this.generateRandomSuffix()}`,
+        tenantId: tenantId,
+        currency: "INR",
+        idempotencyKey: idempotencyKey as string,
+      });
 
-    return res.json({ newOrder });
+      return res.json({ session });
+    }
+
+    return res.json({ session: null });
   };
 
   private calculateTotal = async (cart: CartItem[]) => {
@@ -200,4 +219,13 @@ export class OrderController {
     }
     return 0;
   };
+  private generateRandomSuffix(length = 7): string {
+    const chars =
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    let result = "";
+    for (let i = 0; i < length; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+  }
 }

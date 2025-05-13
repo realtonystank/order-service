@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { Order, OrderStatus, PaymentMode } from "./orderTypes";
+import { Order, OrderStatus, PaymentMode, PaymentStatus } from "./orderTypes";
 import { CartItem } from "../types";
 
 const toppingSchema = new mongoose.Schema({
@@ -100,6 +100,10 @@ const orderSchema = new mongoose.Schema<Order>(
     paymentMode: {
       type: String,
       enum: PaymentMode,
+    },
+    paymentStatus: {
+      type: String,
+      enum: PaymentStatus,
     },
     paymentId: {
       type: String,
