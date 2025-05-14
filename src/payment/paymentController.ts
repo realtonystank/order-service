@@ -2,8 +2,12 @@ import { Request, Response } from "express";
 import { PaymentGW } from "./paymentTypes";
 import orderModel from "../order/orderModel";
 import { PaymentStatus } from "../order/orderTypes";
+import { MessageBroker } from "../types/broker";
 export class PaymentController {
-  constructor(private paymentGW: PaymentGW) {}
+  constructor(
+    private paymentGW: PaymentGW,
+    private broker: MessageBroker,
+  ) {}
   handleWebhook = async (req: Request, res: Response) => {
     console.log("webhook body - ", req.body);
     const webhookBody = req.body;
@@ -19,7 +23,7 @@ export class PaymentController {
       console.log("verified session -", verifiedSession);
 
       const isPaymentSuccess = verifiedSession.paymentStatus === "paid";
-      await orderModel.updateOne(
+      const updatedOrder = await orderModel.findOneAndUpdate(
         {
           _id: verifiedSession.metadata.orderId,
         },
@@ -30,6 +34,8 @@ export class PaymentController {
         },
         { new: true },
       );
+
+      await this.broker.sendMessage("order", JSON.stringify(updatedOrder));
     }
     res.json({ success: true });
   };
