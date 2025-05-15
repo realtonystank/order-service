@@ -31,7 +31,7 @@ export class CashFreeGW implements PaymentGW {
         customer_phone: "9823252342",
       },
       order_meta: {
-        return_url: `http://localhost:5503/payments?order_id=${options.cashfreeOrderId}`,
+        return_url: `${config.get("client.url")}/payment?order_id=${options.cashfreeOrderId}`,
         // payment_methods: "cc,dc",
       },
       order_tags: {
