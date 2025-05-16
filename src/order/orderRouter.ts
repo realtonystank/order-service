@@ -18,5 +18,6 @@ router.post(
   orderCreateValidator,
   asyncWrapper(orderController.create),
 );
+router.get("/mine", authenticate, asyncWrapper(orderController.getMine));
 
 export default router;
