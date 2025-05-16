@@ -5,11 +5,12 @@ import { OrderController } from "./orderController";
 import orderCreateValidator from "./order-create-validator";
 import { createCashFreeGW } from "../common/factories/paymentGwFactory";
 import { createMessageBroker } from "../common/factories/brokerFactory";
+import logger from "../config/logger";
 
 const router = express.Router();
 const cashfree = createCashFreeGW();
 const broker = createMessageBroker();
-const orderController = new OrderController(cashfree, broker);
+const orderController = new OrderController(cashfree, broker, logger);
 
 router.post(
   "/",

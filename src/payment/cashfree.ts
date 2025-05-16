@@ -54,7 +54,7 @@ export class CashFreeGW implements PaymentGW {
 
       return {
         id: session.data.payment_session_id,
-        paymentUrl: "testing",
+        paymentUrl: "",
         paymentStatus: "unpaid",
       };
     } catch (err) {

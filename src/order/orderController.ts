@@ -15,10 +15,12 @@ import idempotencyModel from "../idempotency/idempotencyModel";
 import mongoose from "mongoose";
 import { PaymentGW } from "../payment/paymentTypes";
 import { MessageBroker } from "../types/broker";
+import { Logger } from "winston";
 export class OrderController {
   constructor(
     private paymentGw: PaymentGW,
     private broker: MessageBroker,
+    private logger: Logger,
   ) {}
 
   create = async (req: Request, res: Response, next: NextFunction) => {
@@ -124,7 +126,13 @@ export class OrderController {
 
     await this.broker.sendMessage("order", JSON.stringify(newOrder));
 
-    return res.json({ session: null });
+    return res.json({
+      session: {
+        orderId: newOrder[0]._id,
+        paymentMode: "cash",
+        tenantId,
+      },
+    });
   };
 
   private calculateTotal = async (cart: CartItem[]) => {
