@@ -17,6 +17,7 @@ import { PaymentGW } from "../payment/paymentTypes";
 import { MessageBroker } from "../types/broker";
 import { Logger } from "winston";
 import customerModel from "../customer/customerModel";
+import { Roles } from "../common/constants";
 export class OrderController {
   constructor(
     private paymentGw: PaymentGW,
@@ -155,6 +156,39 @@ export class OrderController {
     );
 
     return res.json(orders);
+  };
+
+  getSingle = async (req: AuthRequest, res: Response, next: NextFunction) => {
+    const orderId = req.params.orderId;
+    const { sub: userId, role, tenant: tenantId } = req.auth;
+
+    const order = await orderModel.findOne({ _id: orderId });
+    if (!order) {
+      return next(createHttpError(400, "order does not exist."));
+    }
+
+    if (role === Roles.ADMIN) {
+      return res.json(order);
+    }
+
+    const myRestaurantOrder = order.tenantId === tenantId;
+    if (role === Roles.MANAGER && myRestaurantOrder) {
+      return res.json(order);
+    }
+
+    if (role === Roles.CUSTOMER) {
+      const customer = await customerModel.findOne({ userId });
+
+      if (!customer) {
+        return next(createHttpError(400, "No customer found."));
+      }
+
+      if (customer._id === order.customerId) {
+        return res.json(order);
+      }
+    }
+
+    return next(createHttpError(403, "Operation not permitted."));
   };
 
   private calculateTotal = async (cart: CartItem[]) => {
