@@ -166,12 +166,18 @@ export class OrderController {
       ? req.query.fields.toString().split(",")
       : [];
 
-    const projection = fields.reduce((acc, item) => {
-      acc[item] = 1;
-      return acc;
-    }, {});
+    const projection = fields.reduce(
+      (acc, item) => {
+        acc[item] = 1;
+        return acc;
+      },
+      { customerId: 1 },
+    );
 
-    const order = await orderModel.findOne({ _id: orderId }, projection);
+    const order = await orderModel
+      .findOne({ _id: orderId }, projection)
+      .populate("customerId", "firstName lastName")
+      .exec();
     if (!order) {
       return next(createHttpError(400, "order does not exist."));
     }
@@ -192,7 +198,7 @@ export class OrderController {
         return next(createHttpError(400, "No customer found."));
       }
 
-      if (customer._id === order.customerId) {
+      if (customer._id === order.customerId._id) {
         return res.json(order);
       }
     }
