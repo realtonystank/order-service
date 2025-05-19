@@ -11,7 +11,7 @@ import config from "config";
 const app = express();
 app.use(
   cors({
-    origin: [config.get("client.url")],
+    origin: [config.get("client.url"), config.get("adminDashboard.url")],
     credentials: true,
     methods: ["GET", "POST", "PATCH", "DELETE"],
   }),

@@ -3,7 +3,7 @@ import { Order, OrderStatus, PaymentMode, PaymentStatus } from "./orderTypes";
 import { CartItem } from "../types";
 
 const toppingSchema = new mongoose.Schema({
-  id: {
+  _id: {
     type: mongoose.Schema.Types.ObjectId,
     required: true,
   },
@@ -48,7 +48,7 @@ const cartSchema = new mongoose.Schema<CartItem>({
     },
     selectedToppings: [
       {
-        type: [toppingSchema],
+        type: toppingSchema,
       },
     ],
   },

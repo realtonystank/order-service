@@ -123,7 +123,9 @@ export class OrderController {
         idempotencyKey: idempotencyKey as string,
       });
       await this.broker.sendMessage("order", JSON.stringify(newOrder));
-      return res.json({ session });
+      return res.json({
+        session: { ...session, paymentMode: PaymentMode.CARD },
+      });
     }
 
     await this.broker.sendMessage("order", JSON.stringify(newOrder));
@@ -131,7 +133,7 @@ export class OrderController {
     return res.json({
       session: {
         orderId: newOrder[0]._id,
-        paymentMode: "cash",
+        paymentMode: PaymentMode.CASH,
         tenantId,
       },
     });
