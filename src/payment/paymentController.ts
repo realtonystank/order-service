@@ -4,6 +4,7 @@ import orderModel from "../order/orderModel";
 import { PaymentStatus } from "../order/orderTypes";
 import { MessageBroker } from "../types/broker";
 import { Logger } from "winston";
+import { OrderEvents } from "../types";
 export class PaymentController {
   constructor(
     private paymentGW: PaymentGW,
@@ -37,7 +38,16 @@ export class PaymentController {
         { new: true },
       );
 
-      await this.broker.sendMessage("order", JSON.stringify(updatedOrder));
+      const brokerMessage = {
+        event_type: OrderEvents.PAYMENT_STATUS_UPDATE,
+        data: updatedOrder,
+      };
+
+      await this.broker.sendMessage(
+        "order",
+        JSON.stringify(brokerMessage),
+        updatedOrder._id.toString(),
+      );
     }
     res.json({ success: true });
   };

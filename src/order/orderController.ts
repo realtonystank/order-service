@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import { validationResult } from "express-validator";
 import createHttpError from "http-errors";
-import { AuthRequest, CartItem, Topping } from "../types";
+import { AuthRequest, CartItem, OrderEvents, Topping } from "../types";
 import productCacheModel, {
   ProductPricingCache,
 } from "../productCache/productCacheModel";
@@ -122,13 +122,33 @@ export class OrderController {
         currency: "INR",
         idempotencyKey: idempotencyKey as string,
       });
-      await this.broker.sendMessage("order", JSON.stringify(newOrder));
+
+      const brokerMessage = {
+        event_type: OrderEvents.ORDER_CREATE,
+        data: newOrder[0],
+      };
+
+      await this.broker.sendMessage(
+        "order",
+        JSON.stringify(brokerMessage),
+        newOrder[0]._id.toString(),
+      );
+
       return res.json({
         session: { ...session, paymentMode: PaymentMode.CARD },
       });
     }
 
-    await this.broker.sendMessage("order", JSON.stringify(newOrder));
+    const brokerMessage = {
+      event_type: OrderEvents.ORDER_CREATE,
+      data: newOrder[0],
+    };
+
+    await this.broker.sendMessage(
+      "order",
+      JSON.stringify(brokerMessage),
+      newOrder[0]._id.toString(),
+    );
 
     return res.json({
       session: {
@@ -273,6 +293,17 @@ export class OrderController {
         { _id: orderId },
         { orderStatus },
         { new: true },
+      );
+
+      const brokerMessage = {
+        event_type: OrderEvents.ORDER_STATUS_UPDATE,
+        data: updatedOrder,
+      };
+
+      await this.broker.sendMessage(
+        "order",
+        JSON.stringify(brokerMessage),
+        updatedOrder._id.toString(),
       );
 
       return res.json({ _id: updatedOrder.id });
