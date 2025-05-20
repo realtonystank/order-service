@@ -243,6 +243,44 @@ export class OrderController {
     return next(createHttpError(403, "Operation not permitted."));
   };
 
+  changeStatus = async (
+    req: AuthRequest,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    const { role, tenant: tenantId } = req.auth;
+    const orderId = req.params.orderId;
+
+    if (role === Roles.MANAGER || role === Roles.ADMIN) {
+      const order = await orderModel.findOne({ _id: orderId });
+
+      if (!order) {
+        return next(createHttpError(400, "Order not found."));
+      }
+
+      const isMyRestaurantOrder = order.tenantId === tenantId;
+      if (role === Roles.MANAGER && !isMyRestaurantOrder) {
+        return next(createHttpError(403, "Not Authorized."));
+      }
+
+      const orderStatus = req.body.status;
+      console.log("valid values - ", Object.values(OrderStatus));
+      if (!Object.values(OrderStatus).includes(orderStatus)) {
+        return next(createHttpError(400, "Invalid order status passed."));
+      }
+
+      const updatedOrder = await orderModel.findOneAndUpdate(
+        { _id: orderId },
+        { orderStatus },
+        { new: true },
+      );
+
+      return res.json({ _id: updatedOrder.id });
+    }
+
+    return next(createHttpError(403, "Not Authorized."));
+  };
+
   private calculateTotal = async (cart: CartItem[]) => {
     const productIds = cart.map((item) => item._id);
 

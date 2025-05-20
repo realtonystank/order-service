@@ -21,5 +21,10 @@ router.post(
 router.get("/mine", authenticate, asyncWrapper(orderController.getMine));
 router.get("/:orderId", authenticate, asyncWrapper(orderController.getSingle));
 router.get("/", authenticate, asyncWrapper(orderController.getAll));
+router.patch(
+  "/change-status/:orderId",
+  authenticate,
+  asyncWrapper(orderController.changeStatus),
+);
 
 export default router;
